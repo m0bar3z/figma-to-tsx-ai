@@ -32,3 +32,8 @@ export default function RootLayout({
     </html>
   );
 }
+
+// conventional commits
+// husky git hooks
+// eslint
+
