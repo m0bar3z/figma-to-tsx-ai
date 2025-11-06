@@ -26,7 +26,14 @@ export async function POST(req: Request) {
 
     const data = await res.json();
 
-    const code = data.choices[0].message.content.trim();
+    let code = data.choices[0].message.content.trim();
+
+    const lines = code.split('\n');
+    if (lines[0].startsWith('```') && lines[lines.length - 1] === '```') {
+      code = lines.slice(1, -1).join('\n').trim();
+    }
+
+    return NextResponse.json({ code });
 
     return NextResponse.json({ code });
   } catch (error) {
