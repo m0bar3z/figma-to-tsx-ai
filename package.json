@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port=3010",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
@@ -22,7 +22,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "babel-plugin-react-compiler": "1.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
