@@ -2,58 +2,43 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { url, fileKey } = body;
+  const { url, fileKey: providedKey, nodeIds } = body;
 
-  const extractFromUrl = (u?: string) => {
-    if (!u) return null;
-    const patterns = [
-      /\/(?:file|design)\/([^\/\?]+)/, // web/design URL
-      /\/files\/([^\/\?]+)/, // api/v1/files/
-    ];
-    for (const p of patterns) {
-      const m = u.match(p);
-      if (m && m[1]) return m[1];
-    }
-    return null;
-  };
+  let fileKey = providedKey;
+  if (url) {
+    try {
+      const u = new URL(url);
+      const match = u.pathname.match(/\/(?:file|design|proto|fig|community)\/([a-zA-Z0-9]{22})/);
+      if (match) fileKey = match[1];
+    } catch {}
+  }
 
-  const extractedFileKey = fileKey ?? extractFromUrl(url);
-
-  if (!extractedFileKey) {
-    return NextResponse.json(
-      { error: "Invalid Figma URL or missing fileKey. Provide a Figma file URL or fileKey." },
-      { status: 400 },
-    );
+  if (!fileKey) {
+    return NextResponse.json({ error: "Invalid Figma URL or missing fileKey" }, { status: 400 });
   }
 
   const token = process.env.FIGMA_TOKEN;
-  if (!token) {
-    console.error("Missing FIGMA_TOKEN env var");
-    return NextResponse.json({ error: "Server misconfiguration: missing FIGMA_TOKEN" }, { status: 500 });
-  }
+  if (!token) return NextResponse.json({ error: "Missing FIGMA_TOKEN" }, { status: 500 });
 
-  const apiUrl = `https://api.figma.com/v1/files/${fileKey}`;
+  let apiUrl = `https://api.figma.com/v1/files/${fileKey}`;
+  if (nodeIds && Array.isArray(nodeIds) && nodeIds.length > 0) {
+    const ids = nodeIds.map((id: string) => id.replace(/-/g, ":")).join(",");
+    apiUrl += `/nodes?ids=${ids}`;
+  }
 
   try {
     const res = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "X-Figma-Token": token,
-        Accept: "application/json",
-      },
+      headers: { "X-Figma-Token": token },
     });
     const data = await res.json();
 
     if (!res.ok) {
-      console.error("Figma API returned non-2xx", res.status, data);
-
-      return NextResponse.json({ error: "Figma API error", status: res.status, details: data }, { status: res.status });
+      console.error("Figma error:", data);
+      return NextResponse.json({ error: "Figma API error", details: data }, { status: res.status });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error("Fetch to Figma failed:", err);
-
-    return NextResponse.json({ error: "Failed to fetch Figma data" }, { status: 500 });
+    return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
   }
 }
