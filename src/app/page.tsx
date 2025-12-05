@@ -1,30 +1,33 @@
 "use client";
-
+import saveAs from "file-saver";
+import JSZip from "jszip";
 import { useCallback, useEffect, useState } from "react";
 
 export default function Home() {
+  const [url, setUrl] = useState("");
+  const [projectName, setProjectName] = useState("my-figma-app");
+  const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const [parsed, setParsed] = useState<{
     fileKey: string;
     nodeId: string | null;
   } | null>(null);
+  const [figmaData, setFigmaData] = useState<any>(null);
+  const [components, setComponents] = useState<Array<{ id: string; name: string }>>([]);
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [generated, setGenerated] = useState<Array<{ name: string; code: string }>>([]);
 
-  const [url, setUrl] = useState("");
-  const [projectName, setProjectName] = useState("my-figma-app");
-  const [status, setStatus] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
-  const parseFigmaUrl = useCallback((url: string) => {
+  const parseFigmaUrl = useCallback((url: string): { fileKey: string; nodeId: string | null } | null => {
     if (!url.trim()) return null;
     try {
-      const trimmedUrl = new URL(url.trim());
-      if (!trimmedUrl.hostname.endsWith("figma.com")) return null;
-
-      const match = trimmedUrl.pathname.match(/\/(?:file|design|proto|fig|community)\/([a-zA-Z0-9]{22})/);
+      const u = new URL(url.trim());
+      if (!u.hostname.endsWith("figma.com")) return null;
+      const match = u.pathname.match(/\/(?:file|design|proto|fig|community)\/([a-zA-Z0-9]{22})/);
       if (!match) return null;
-
-      let nodeId = trimmedUrl.searchParams.get("node-id");
+      let nodeId = u.searchParams.get("node-id");
       if (nodeId) nodeId = nodeId.replace(/-/g, ":");
-
       return { fileKey: match[1], nodeId };
     } catch {
       return null;
@@ -33,63 +36,158 @@ export default function Home() {
 
   useEffect(() => {
     setParsed(parseFigmaUrl(url));
+    setFigmaData(null);
+    setComponents([]);
+    setGenerated([]);
+    setSelectedIds(new Set());
   }, [url, parseFigmaUrl]);
 
-  const handleGenerate = async () => {
-    setIsLoading(true);
+  const handleLoadFile = async () => {
+    if (!parsed) return;
+    setLoading(true);
+    setStatus("Fetching Figma file...");
+    try {
+      const res = await fetch("/api/figma", {
+        method: "POST",
+        body: JSON.stringify({ fileKey: parsed.fileKey }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Failed");
+      const data = await res.json();
+      setFigmaData(data);
 
-    setStatus("Fetching Figma data...");
+      const comps: Array<{ id: string; name: string }> = [];
+      data.document.children.forEach((page: any) => {
+        collectComponents(page, comps);
+      });
+      setComponents(comps);
+      if (comps.length === 0) throw new Error("No frames/components found");
+
+      const nodeIds = comps.map((c) => c.id);
+      const imgRes = await fetch("/api/figma-images", {
+        method: "POST",
+        body: JSON.stringify({ fileKey: parsed.fileKey, nodeIds }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (imgRes.ok) {
+        const imgs = await imgRes.json();
+        setThumbnails(imgs);
+      }
+
+      if (parsed.nodeId) {
+        const pre = comps.find((c) => c.id === parsed.nodeId);
+        if (pre) setSelectedIds(new Set([pre.id]));
+      }
+
+      setStatus(`Loaded ${comps.length} components`);
+    } catch (error: any) {
+      setStatus(`Error: ${error.message}`);
+    }
+    setLoading(false);
+  };
+
+  function collectComponents(node: any, result: Array<{ id: string; name: string }> = []) {
+    if (!node || node.visible === false) return;
+    const isSelectable =
+      ["FRAME", "COMPONENT", "COMPONENT_SET"].includes(node.type) &&
+      node.children?.length > 0 &&
+      !node.name.startsWith("_");
+    if (isSelectable) {
+      result.push({ id: node.id, name: node.name || "Unnamed" });
+    }
+    node.children?.forEach((child: any) => collectComponents(child, result));
+  }
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleGenerateMultiple = async () => {
+    if (selectedIds.size === 0 || !parsed) return;
+    setLoading(true);
+    setGenerated([]);
+    setStatus("Fetching selected nodes...");
 
     try {
-      const figmaRes = await fetch("/api/figma", {
+      const selIds = Array.from(selectedIds);
+      const nodesRes = await fetch("/api/figma", {
         method: "POST",
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ fileKey: parsed.fileKey, nodeIds: selIds }),
         headers: { "Content-Type": "application/json" },
       });
-      const figmaData = await figmaRes.json();
+      if (!nodesRes.ok) throw new Error("Failed to fetch nodes");
+      const nodesData = await nodesRes.json();
 
-      if (!figmaRes.ok) throw new Error(figmaData.error);
+      const gens: Array<{ name: string; code: string }> = [];
+      for (let i = 0; i < selIds.length; i++) {
+        const id = selIds[i];
+        const nodeInfo = nodesData.nodes[id];
+        if (!nodeInfo) continue;
+        const figmaJson = nodeInfo.document;
+        const compName = components.find((c) => c.id === id)?.name || "Component";
 
-      setStatus("Generating AI code...");
-      const codeRes = await fetch("/api/generate-code", {
-        method: "POST",
-        body: JSON.stringify({ figmaJson: figmaData }),
-        headers: { "Content-Type": "application/json" },
-      });
-      const { code } = await codeRes.json();
+        setStatus(`Generating ${compName} (${i + 1}/${selIds.length})...`);
 
-      if (!codeRes.ok) throw new Error(code.error);
+        const codeRes = await fetch("/api/generate-code", {
+          method: "POST",
+          body: JSON.stringify({ figmaJson, componentName: compName }),
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!codeRes.ok) throw new Error("Code generation failed");
+        const { code } = await codeRes.json();
 
-      setStatus("Saving component...");
-      const saveRes = await fetch("/api/save-component", {
-        method: "POST",
-        body: JSON.stringify({ projectName, componentName: "FigmaComponent", code }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!saveRes.ok) throw new Error((await saveRes.json()).error);
-
-      setStatus(`Success! Component generated at ./generated/${projectName}/FigmaComponent.tsx`);
-    } catch (error) {
-      setStatus(`Error: ${(error as Error).message}`);
+        const fileName = toPascalCase(compName) + ".tsx";
+        gens.push({ name: fileName, code });
+      }
+      setGenerated(gens);
+      setStatus(`Success! ${gens.length} components generated`);
+    } catch (error: any) {
+      setStatus(`Error: ${error.message}`);
     }
+    setLoading(false);
+  };
 
-    setIsLoading(false);
+  function toPascalCase(str: string): string {
+    return str
+      .replace(/[^a-zA-Z0-9]+/g, " ")
+      .replace(/\w+/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase())
+      .replace(/ /g, "");
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setStatus("Copied!");
+  };
+
+  const downloadSingle = (filename: string, code: string) => {
+    const blob = new Blob([code], { type: "text/tsx" });
+    saveAs(blob, filename);
+  };
+
+  const downloadZip = async () => {
+    const zip = new JSZip();
+    const folder = zip.folder(projectName || "figma-components");
+    generated.forEach((g) => folder?.file(g.name, g.code));
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${projectName || "figma-components"}.zip`);
   };
 
   return (
-    <main className="min-h-screen bg-gray-200 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-4 text-gray-950 text-center">Figma to Next.js AI Builder</h1>
+        <h1 className="text-2xl font-bold mb-4 text-center">Figma → Next.js AI Builder</h1>
 
-        <p className="text-sm text-gray-950 mb-4 text-center">Paste Figma URL, Pick Components, Download Code</p>
+        <p className="text-sm text-gray-600 mb-4 text-center">Paste Figma URL → pick components → download code</p>
 
         <input
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.figma.com/file/..."
-          className="w-full p-2 border text-black rounded mb-2"
+          placeholder="https://www.figma.com/design/..."
+          className={`w-full p-2 border rounded mb-2 ${parsed ? "border-green-500" : url ? "border-red-500" : "border-gray-300"} text-black`}
         />
         {!parsed && url && <p className="text-red-600 text-sm mb-2">Invalid Figma URL</p>}
         {parsed && <p className="text-green-600 text-sm mb-2">Valid → fileKey: {parsed.fileKey}</p>}
@@ -98,25 +196,103 @@ export default function Home() {
           type="text"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
-          placeholder="Project name (e.g., my-app)"
-          className="w-full text-black p-2 border rounded mb-4"
+          placeholder="Project name"
+          className="w-full p-2 border rounded mb-4 text-black"
         />
 
-        <button
-          onClick={handleGenerate}
-          disabled={!url || isLoading}
-          className="w-full bg-blue-500 text-white p-2 rounded disabled:opacity-50"
-        >
-          {isLoading ? "Generating..." : "Generate Project"}
-        </button>
+        {parsed && !figmaData && (
+          <button
+            onClick={handleLoadFile}
+            disabled={loading}
+            className="w-full bg-purple-600 text-white p-2 rounded mb-4 disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Load Figma File"}
+          </button>
+        )}
+
+        {/* Component Gallery */}
+        {components.length > 0 && (
+          <>
+            <h2 className="text-xl font-semibold mb-4">Select Components ({selectedIds.size} selected)</h2>
+            <button onClick={() => setSelectedIds(new Set(components.map((c) => c.id)))} className="mb-4 text-blue-600">
+              Select All
+            </button>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+              {components.map((c) => (
+                <div
+                  key={c.id}
+                  className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${selectedIds.has(c.id) ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
+                  onClick={() => toggleSelect(c.id)}
+                >
+                  {thumbnails[c.id] ? (
+                    <img
+                      src={thumbnails[c.id]!}
+                      alt={c.name}
+                      className="w-full h-32 object-contain bg-gray-100 rounded"
+                    />
+                  ) : (
+                    <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center text-xs">
+                      No preview
+                    </div>
+                  )}
+                  <div className="flex items-center mt-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(c.id)}
+                      onChange={() => toggleSelect(c.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="ml-2 text-sm font-medium truncate">{c.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleGenerateMultiple}
+              disabled={loading || selectedIds.size === 0}
+              className="w-full bg-blue-600 text-white p-3 rounded disabled:opacity-50"
+            >
+              {loading ? "Generating..." : `Generate ${selectedIds.size} Component${selectedIds.size > 1 ? "s" : ""}`}
+            </button>
+          </>
+        )}
+
+        {/* Generated Output */}
+        {generated.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-semibold mb-4">Generated Components</h2>
+            {generated.map((g) => (
+              <div key={g.name} className="mb-8 border rounded-lg p-4 bg-gray-50">
+                <h3 className="font-bold mb-2">{g.name}</h3>
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-xs max-h-96">{g.code}</pre>
+                <div className="mt-2 flex gap-2">
+                  <button onClick={() => copyToClipboard(g.code)} className="bg-gray-700 text-white px-3 py-1 rounded">
+                    Copy
+                  </button>
+                  <button
+                    onClick={() => downloadSingle(g.name, g.code)}
+                    className="bg-green-600 text-white px-3 py-1 rounded"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button onClick={downloadZip} className="w-full bg-green-600 text-white p-3 rounded mt-4">
+              Download All as ZIP
+            </button>
+          </div>
+        )}
+
         {status && (
           <p
-            className={`mt-4 p-2 rounded ${status.includes("Error") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+            className={`mt-4 p-3 rounded ${status.includes("Error") || status.includes("Invalid") ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
           >
             {status}
           </p>
         )}
       </div>
-    </main>
+    </div>
   );
 }
