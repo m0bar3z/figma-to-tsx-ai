@@ -3,6 +3,7 @@ import saveAs from "file-saver";
 import JSZip from "jszip";
 import { useCallback, useEffect, useState } from "react";
 import { ComponentGallery } from "../components/ComponentGallery";
+import { GeneratedOutput } from "../components/GeneratedOutput";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -222,6 +223,15 @@ export default function Home() {
             onSelectAll={selectAll}
             onToggleSelect={toggleSelect}
             onGenerate={handleGenerateMultiple}
+          />
+        )}
+
+        {generated.length > 0 && (
+          <GeneratedOutput
+            files={generated}
+            onCopy={copyToClipboard}
+            onDownloadSingle={downloadSingle}
+            onDownloadAll={downloadZip}
           />
         )}
 

@@ -44,7 +44,9 @@ export const ComponentGallery = ({
               {thumbnail ? (
                 <img src={thumbnail} alt={component.name} className="w-full h-32 object-contain bg-gray-100 rounded" />
               ) : (
-                <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center text-xs">No preview</div>
+                <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center text-xs">
+                  No preview
+                </div>
               )}
               <div className="flex items-center mt-2">
                 <input
@@ -70,5 +72,3 @@ export const ComponentGallery = ({
     </>
   );
 };
-
-
