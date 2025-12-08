@@ -2,6 +2,7 @@
 import saveAs from "file-saver";
 import JSZip from "jszip";
 import { useCallback, useEffect, useState } from "react";
+import { ComponentGallery } from "../components/ComponentGallery";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -104,6 +105,8 @@ export default function Home() {
     else newSet.add(id);
     setSelectedIds(newSet);
   };
+
+  const selectAll = () => setSelectedIds(new Set(components.map((c) => c.id)));
 
   const handleGenerateMultiple = async () => {
     if (selectedIds.size === 0 || !parsed) return;
@@ -210,79 +213,16 @@ export default function Home() {
           </button>
         )}
 
-        {/* Component Gallery */}
         {components.length > 0 && (
-          <>
-            <h2 className="text-xl font-semibold mb-4">Select Components ({selectedIds.size} selected)</h2>
-            <button onClick={() => setSelectedIds(new Set(components.map((c) => c.id)))} className="mb-4 text-blue-600">
-              Select All
-            </button>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-              {components.map((c) => (
-                <div
-                  key={c.id}
-                  className={`border-2 rounded-lg p-3 cursor-pointer transition-all ${selectedIds.has(c.id) ? "border-blue-500 bg-blue-50" : "border-gray-300"}`}
-                  onClick={() => toggleSelect(c.id)}
-                >
-                  {thumbnails[c.id] ? (
-                    <img
-                      src={thumbnails[c.id]!}
-                      alt={c.name}
-                      className="w-full h-32 object-contain bg-gray-100 rounded"
-                    />
-                  ) : (
-                    <div className="w-full h-32 bg-gray-200 rounded flex items-center justify-center text-xs">
-                      No preview
-                    </div>
-                  )}
-                  <div className="flex items-center mt-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(c.id)}
-                      onChange={() => toggleSelect(c.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="ml-2 text-sm font-medium truncate">{c.name}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={handleGenerateMultiple}
-              disabled={loading || selectedIds.size === 0}
-              className="w-full bg-blue-600 text-white p-3 rounded disabled:opacity-50"
-            >
-              {loading ? "Generating..." : `Generate ${selectedIds.size} Component${selectedIds.size > 1 ? "s" : ""}`}
-            </button>
-          </>
-        )}
-
-        {/* Generated Output */}
-        {generated.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-semibold mb-4">Generated Components</h2>
-            {generated.map((g) => (
-              <div key={g.name} className="mb-8 border rounded-lg p-4 bg-gray-50">
-                <h3 className="font-bold mb-2">{g.name}</h3>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-xs max-h-96">{g.code}</pre>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => copyToClipboard(g.code)} className="bg-gray-700 text-white px-3 py-1 rounded">
-                    Copy
-                  </button>
-                  <button
-                    onClick={() => downloadSingle(g.name, g.code)}
-                    className="bg-green-600 text-white px-3 py-1 rounded"
-                  >
-                    Download
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button onClick={downloadZip} className="w-full bg-green-600 text-white p-3 rounded mt-4">
-              Download All as ZIP
-            </button>
-          </div>
+          <ComponentGallery
+            components={components}
+            thumbnails={thumbnails}
+            selectedIds={selectedIds}
+            loading={loading}
+            onSelectAll={selectAll}
+            onToggleSelect={toggleSelect}
+            onGenerate={handleGenerateMultiple}
+          />
         )}
 
         {status && (
