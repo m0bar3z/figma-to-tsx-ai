@@ -21,7 +21,10 @@ export const GeneratedOutput = ({ files, onCopy, onDownloadSingle, onDownloadAll
             <button onClick={() => onCopy(file.code)} className="bg-gray-700 text-white px-3 py-1 rounded">
               Copy
             </button>
-            <button onClick={() => onDownloadSingle(file.name, file.code)} className="bg-green-600 text-white px-3 py-1 rounded">
+            <button
+              onClick={() => onDownloadSingle(file.name, file.code)}
+              className="bg-green-600 text-white px-3 py-1 rounded"
+            >
               Download
             </button>
           </div>
@@ -33,5 +36,3 @@ export const GeneratedOutput = ({ files, onCopy, onDownloadSingle, onDownloadAll
     </div>
   );
 };
-
-

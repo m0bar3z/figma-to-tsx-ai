@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  const { figmaJson } = await req.json();
-  const prompt = `Convert this Figma JSON to a React TS component with Tailwind v4 classes. Output only the code:\n${JSON.stringify(figmaJson, null, 2)}`;
+const DEFAULT_MODEL = "openai/gpt-4o";
 
-  console.log("sdfsdf", prompt);
+export async function POST(req: Request) {
+  const { figmaJson, model } = await req.json();
+  const selectedModel = model || DEFAULT_MODEL;
+
+  const prompt = `Convert this Figma JSON to a React TS component with Tailwind v4 classes. Output only the code:\n${JSON.stringify(figmaJson, null, 2)}`;
 
   try {
     const res = await fetch("https://router.huggingface.co/v1/chat/completions", {
@@ -15,7 +17,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         messages: [{ role: "user", content: prompt }],
-        model: "openai/gpt-oss-20b",
+        model: selectedModel,
         stream: false,
       }),
     });

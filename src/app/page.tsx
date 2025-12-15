@@ -2,6 +2,7 @@
 
 import { ComponentGallery } from "../components/ComponentGallery";
 import { GeneratedOutput } from "../components/GeneratedOutput";
+import { ModelSelector } from "../components/ModelSelector";
 import { useFigmaBuilder } from "../hooks/useFigmaBuilder";
 
 export default function Home() {
@@ -10,6 +11,8 @@ export default function Home() {
     setUrl,
     projectName,
     setProjectName,
+    selectedModel,
+    setSelectedModel,
     parsed,
     status,
     loading,
@@ -51,6 +54,8 @@ export default function Home() {
           placeholder="Project name"
           className="w-full p-2 border rounded mb-4 text-black"
         />
+
+        <ModelSelector selectedModel={selectedModel} onModelChange={setSelectedModel} />
 
         {parsed && !figmaData && (
           <button
