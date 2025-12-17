@@ -317,7 +317,77 @@ This project is for educational purposes. Feel free to use it as a learning reso
 
 ## 🤝 Contributing
 
-Contributions are welcome! This is an educational project.
+Contributions are welcome! This is an educational project, and we appreciate any help you can provide.
+
+### Getting Started
+
+1. **Fork the repository** and clone it to your local machine
+2. **Install dependencies**: `npm install`
+3. **Set up environment variables**: Create a `.env.local` file with your API tokens (see [Getting Started](#-getting-started))
+4. **Create a branch**: `git checkout -b feature/your-feature-name` or `git checkout -b fix/your-bug-fix`
+
+### Development Workflow
+
+1. **Make your changes** following the code style guidelines below
+2. **Test your changes**: Run `npm run dev` and test locally
+3. **Lint your code**: Run `npm run lint` to check for issues
+4. **Format your code**: Run `npm run format` to auto-format
+5. **Commit your changes**: Write clear, descriptive commit messages
+6. **Push to your fork**: `git push origin your-branch-name`
+7. **Open a Pull Request**: Provide a clear description of your changes
+
+### Code Standards
+
+- **TypeScript**: Use TypeScript for all new code
+- **Linting**: Code must pass Biome linting (`npm run lint`)
+- **Formatting**: Code must be formatted with Biome (`npm run format`)
+- **Naming**: Use descriptive names for variables, functions, and components
+- **Comments**: Add comments for complex logic, especially educational examples
+- **Components**: Keep components modular and reusable
+- **Hooks**: Extract complex logic into custom hooks
+
+### What to Contribute
+
+We welcome contributions in these areas:
+
+- **🐛 Bug Fixes**: Fix issues you encounter or find
+- **✨ Features**: Implement items from the [Future Improvements](#-future-improvements) list
+- **📚 Documentation**: Improve README, add code comments, write tutorials
+- **🎨 UI/UX**: Enhance the user interface and user experience
+- **🧪 Testing**: Add unit tests or improve test coverage
+- **🔧 Refactoring**: Improve code structure and organization
+- **🌐 Internationalization**: Add support for multiple languages
+- **📖 Examples**: Add educational examples or use cases
+
+### Pull Request Guidelines
+
+When submitting a PR, please:
+
+- **Describe your changes**: What did you change and why?
+- **Reference issues**: Link to any related issues
+- **Test locally**: Ensure your changes work as expected
+- **Keep it focused**: One feature or fix per PR when possible
+- **Update documentation**: If you add features, update the README
+
+### Areas That Need Help
+
+Check the [Future Improvements](#-future-improvements) section for specific features we're looking to implement. Some areas that could use help:
+
+- Adding support for more AI models
+- Improving error handling and user feedback
+- Enhancing the component generation quality
+- Adding tests for components and hooks
+- Creating Storybook stories
+- Improving accessibility
+
+### Questions?
+
+If you have questions or need help getting started, feel free to:
+- Open an issue for discussion
+- Check existing issues for similar questions
+- Review the codebase to understand the patterns used
+
+Thank you for contributing! 🎉
 
 
 ## 📚 Resources
@@ -338,6 +408,3 @@ Contributions are welcome! This is an educational project.
 
 Built as an educational project to demonstrate modern web development practices and AI integration patterns.
 
----
-
-**Happy Learning! 🚀**
