@@ -1,14 +1,14 @@
 # Figma to TSX AI Builder
 
-> **Educational Project**: Learn how to integrate web applications with AI agents and HuggingFace APIs
+> **Educational Project**: Learn how to integrate web applications with HuggingFace APIs
 
 ## 📌 Project Status
 
 **🚧 This repository is currently under active development.**
 
-This is an **educational project** designed to help developers learn how to integrate web applications with AI agents and HuggingFace APIs. The project demonstrates real-world patterns for working with external APIs and AI services.
+This is an **educational project** designed to help developers learn how to integrate web applications with HuggingFace APIs. The project demonstrates real-world patterns for working with external APIs and AI services.
 
-**We welcome contributions!** If you'd like to contribute, please see the [Contributing](#-contributing) section below. Whether you're fixing bugs, adding features, improving documentation, or sharing educational examples, your contributions are valuable.
+**We welcome contributions!** If you'd like to contribute, please check out the [Future Improvements](#-future-improvements) section below to see what I'm working on. Whether you're fixing bugs, adding features from the roadmap, improving documentation, or sharing educational examples, your contributions are valuable.
 
 ---
 
