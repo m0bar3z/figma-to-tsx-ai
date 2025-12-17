@@ -3,13 +3,10 @@
 import saveAs from "file-saver";
 import JSZip from "jszip";
 import { useCallback, useEffect, useState } from "react";
-import { AVAILABLE_MODELS } from "../components/ModelSelector";
 
 type ParsedUrl = { fileKey: string; nodeId: string | null };
 type ComponentSummary = { id: string; name: string };
 type GeneratedFile = { name: string; code: string };
-
-const DEFAULT_MODEL = AVAILABLE_MODELS[0].id;
 
 function parseFigmaUrl(url: string): ParsedUrl | null {
   if (!url.trim()) return null;
@@ -48,7 +45,7 @@ function toPascalCase(str: string): string {
 export function useFigmaBuilder() {
   const [url, setUrl] = useState("");
   const [projectName, setProjectName] = useState("my-figma-app");
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [selectedModel, setSelectedModel] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -125,7 +122,7 @@ export function useFigmaBuilder() {
   }, [components]);
 
   const generateSelected = useCallback(async () => {
-    if (selectedIds.size === 0 || !parsed) return;
+    if (selectedIds.size === 0 || !parsed || !selectedModel) return;
     setLoading(true);
     setGenerated([]);
     setStatus("Fetching selected nodes...");
