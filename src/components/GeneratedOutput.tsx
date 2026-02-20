@@ -36,5 +36,3 @@ export const GeneratedOutput = ({ files, onCopy, onDownloadSingle, onDownloadAll
     </div>
   );
 };
-
-
